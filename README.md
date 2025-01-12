@@ -4,6 +4,202 @@
 
 I have built a InformationRetrievalEngine system which demonstrates the implementation of three important concepts of distributed systems which are application layering, mulithreading and client-server architecture. This Information Retrieval Engine supports indexing or traversing files from a specified input folder and also supports searching of indexed or traversed documents when a user gives a multiple term query. Upon providing search words, this application will search those words across all the traversed and read files and finally returns a list of top documents contaning those search words in the order of their frequency. Some of the sourcecode was carried on from my previous multithreaded version of InformationRetrievalEngine, but in this project I have added the support for client-server architecture. The communication medium used between client and server were POSIX sockets. Implementing this project using client and server components gives us huge advantage in modularity and maintainability of our application. The client will have access to the datasets and is responsible for partial indexing of datasets where datasets were divided based on number of clients, the number of clients is implemented in a way where each client is treated as a thread and maintanance of these clients that is creation of threads will be done by dispatcher. Server side is responsible for maintaining our hashtables DocumentMap and termInvertedIndex, server receives partial index from client and replies the client with its requested information, the requested information is that information which relies on our hashtables documentMap and termInvertedIndex. This is a brief description of my project.Below is few instructions on how to run my application and also my directory structure.
 
+### System Design
+
+This class diagram illustrates the core architecture of the search engine system
+
+```mermaid
+classDiagram
+    %% Benchmark classes
+    class FileRetrievalBenchmark {
+        +main(String[] args) void$
+    }
+
+    class BenchmarkWorker {
+        <<implements Runnable>>
+        -ClientProcessingEngine engine
+        -String datasetPath
+        -String serverIP
+        -String serverPort
+        +BenchmarkWorker(String serverIP, String serverPort, String datasetPath)
+        +run() void
+        +search(String query) void
+        +disconnect() void
+    }
+
+    %% Entry point classes
+    class FileRetrievalServer {
+        +main(String[] args) void$
+    }
+
+    class FileRetrievalClient {
+        +main(String[] args) void$
+    }
+
+    %% Interface classes
+    class ServerAppInterface {
+        -ServerProcessingEngine engine
+        +ServerAppInterface(ServerProcessingEngine engine)
+        +readCommands() void
+    }
+
+    class ClientAppInterface {
+        -ClientProcessingEngine engine
+        +ClientAppInterface(ClientProcessingEngine engine)
+        +readCommands() void
+    }
+
+    %% Worker classes
+    class Dispatcher {
+        <<implements Runnable>>
+        -ServerProcessingEngine engine
+        -int serverPort
+        +Dispatcher(ServerProcessingEngine engine)
+        +run() void
+    }
+
+    class IndexWorker {
+        <<implements Runnable>>
+        -IndexStore store
+        -Socket clientSocket
+        -ServerProcessingEngine engine
+        -BufferedReader in
+        -PrintWriter out
+        -String clientID
+        +IndexWorker(IndexStore store, ServerProcessingEngine engine, Socket clientSocket)
+        +run() void
+        -handleIndexRequest(String message) void
+        -handleSearchRequest(String message) void
+        -handleQuitRequest() void
+    }
+
+    %% Core Engine classes
+    class ServerProcessingEngine {
+        -IndexStore store
+        -Thread dispatcherThread
+        -ServerSocket serverSocket
+        -ArrayList~String~ connectedClients
+        -ExecutorService workerPool
+        -volatile boolean isRunning
+        +ServerProcessingEngine(IndexStore store)
+        +initialize(int serverPort) void
+        +spawnWorker(Socket clientSocket) void
+        +shutdown() void
+        +addConnectedClient(String clientID) void
+        +getConnectedClients() ArrayList~String~
+    }
+    
+    class ClientProcessingEngine {
+        -String clientID
+        -Socket socket
+        -BufferedReader in
+        -PrintWriter out
+        +ClientProcessingEngine(String clientID)
+        +IndexResult indexFiles(String folderPath)
+        +SearchResult searchFiles(ArrayList~String~ terms)
+        +connect(String serverIP, String serverPort) void
+        +disconnect() void
+    }
+
+    %% Storage class
+    class IndexStore {
+        -HashMap~String,Long~ documentMap
+        -HashMap~String,ArrayList~DocFreqPair~~ termInvertedIndex
+        -ReentrantLock documentMapLock
+        -ReentrantLock termInvertedIndexLock
+        -long documentNumber
+        +putDocument(String documentPath) long
+        +getDocument(long documentNumber) String
+        +updateIndex(long documentNumber, HashMap~String,Long~ wordFrequencies) void
+        +lookupIndex(String term) ArrayList~DocFreqPair~
+    }
+
+    %% Data classes
+    class DocFreqPair {
+        +long documentNumber
+        +long wordFrequency
+        +DocFreqPair(long documentNumber, long wordFrequency)
+    }
+
+    class IndexResult {
+        +double executionTime
+        +long totalBytesRead
+        +IndexResult(double executionTime, long totalBytesRead)
+    }
+    
+    class SearchResult {
+        +double excutionTime
+        +ArrayList~DocPathFreqPair~ documentFrequencies
+        +SearchResult(double executionTime, ArrayList~DocPathFreqPair~ documentFrequencies)
+    }
+    
+    class DocPathFreqPair {
+        +String documentPath
+        +long wordFrequency
+        +DocPathFreqPair(String documentPath, long wordFrequency)
+    }
+
+    %% External classes
+    class Socket {
+        <<external>>
+    }
+    
+    class ServerSocket {
+        <<external>>
+    }
+    
+    class BufferedReader {
+        <<external>>
+    }
+    
+    class PrintWriter {
+        <<external>>
+    }
+
+    class ReentrantLock {
+        <<external>>
+    }
+
+    class ExecutorService {
+        <<external>>
+    }
+
+    %% Benchmark relationships
+    FileRetrievalBenchmark ..> BenchmarkWorker : creates
+    FileRetrievalBenchmark --> ExecutorService : uses
+    BenchmarkWorker --> ClientProcessingEngine : uses
+    
+    %% Server-side relationships
+    FileRetrievalServer ..> IndexStore : creates
+    FileRetrievalServer ..> ServerProcessingEngine : creates
+    FileRetrievalServer ..> ServerAppInterface : creates
+    ServerProcessingEngine --> IndexStore : uses
+    ServerProcessingEngine --> ServerSocket : uses
+    ServerProcessingEngine --> ExecutorService : uses
+    ServerProcessingEngine ..> Dispatcher : creates
+    ServerProcessingEngine ..> IndexWorker : creates
+    Dispatcher --> ServerSocket : uses
+    IndexWorker --> IndexStore : uses
+    IndexWorker --> Socket : uses
+    IndexWorker --> BufferedReader : uses
+    IndexWorker --> PrintWriter : uses
+    
+    %% Client-side relationships
+    FileRetrievalClient ..> ClientAppInterface : creates
+    FileRetrievalClient ..> ClientProcessingEngine : creates
+    ClientAppInterface --> ClientProcessingEngine : uses
+    ClientProcessingEngine --> Socket : uses
+    ClientProcessingEngine --> BufferedReader : uses
+    ClientProcessingEngine --> PrintWriter : uses
+    ClientProcessingEngine ..> IndexResult : creates
+    ClientProcessingEngine ..> SearchResult : creates
+    SearchResult --> DocPathFreqPair : contains
+    
+    %% Storage relationships
+    IndexStore --> ReentrantLock : uses
+    IndexStore --> DocFreqPair : uses
+```
+
 ### Directory Structure
 
 After cloning this repository you will need to follow a specific directory structure to run the program.
