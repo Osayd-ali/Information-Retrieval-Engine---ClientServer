@@ -2,11 +2,11 @@
 
 ### Intro 
 
-I have built a InformationRetrievalEngine system which demonstrates the implementation of three important concepts of distributed systems which are application layering, mulithreading and client-server architecture. This Information Retrieval Engine supports indexing or traversing files from a specified input folder and also supports searching of indexed or traversed documents when a user gives a multiple term query. Upon providing search words, this application will search those words across all the traversed and read files and finally returns a list of top documents contaning those search words in the order of their frequency. Some of the sourcecode was carried on from my previous multithreaded version of InformationRetrievalEngine, but in this project I have added the support for client-server architecture. The communication medium used between client and server were POSIX sockets. Implementing this project using client and server components gives us huge advantage in modularity and maintainability of our application. The client will have access to the datasets and is responsible for partial indexing of datasets where datasets were divided based on number of clients, the number of clients is implemented in a way where each client is treated as a thread and maintanance of these clients that is creation of threads will be done by dispatcher. Server side is responsible for maintaining our hashtables DocumentMap and termInvertedIndex, server receives partial index from client and replies the client with its requested information, the requested information is that information which relies on our hashtables documentMap and termInvertedIndex. This is a brief description of my project.Below is few instructions on how to run my application and also my directory structure.
+I have built an InformationRetrievalEngine system which demonstrates the implementation of three important concepts of distributed systems which are application layering, mulithreading and client-server architecture. This Information Retrieval Engine supports indexing or traversing files from a specified input folder and also supports searching of indexed or traversed documents when a user gives a multiple term query. Upon providing search words, this application will search those words across all the traversed and read files and finally returns a list of top documents contaning those search words in the order of their frequency. Some of the sourcecode was carried on from my previous multithreaded version of InformationRetrievalEngine, but in this project I have added the support for client-server architecture. The communication medium used between client and server were POSIX sockets. Implementing this project using client and server components gives us huge advantage in modularity and maintainability of our application. The client will have access to the datasets and is responsible for partial indexing of datasets where datasets were divided based on number of clients, the number of clients is implemented in a way where each client is treated as a thread and maintanance of these clients that is creation of threads will be done by dispatcher. Server side is responsible for maintaining our hashtables DocumentMap and termInvertedIndex, server receives partial index from client and replies the client with its requested information, the requested information is that information which relies on our hashtables documentMap and termInvertedIndex. This is a brief description of my project.Below is few instructions on how to run my application and also my directory structure.
 
 ### System Design
 
-This class diagram illustrates the core architecture of the search engine system
+This class diagram illustrates the core architecture of the search engine system.
 
 ```mermaid
 classDiagram
@@ -204,15 +204,10 @@ classDiagram
 
 After cloning this repository you will need to follow a specific directory structure to run the program.
 
-Firstly, Enter into the directory of csc-435-pa4-Osayd-ali by typing "cd csc-435-pa4-Osayd-ali"
-
-Then enter into app-java directory: "cd app-java"
-
-Here, when you type "ls" you will be able to see datasets directory, java build file and src directory where my source code exists.
-
-You can acces my code if you want to by following the specific path: "cd src/main/java/csc435/app"
-
-After entering into the above path, type "ls" and you will find my source code files. If you wish to enter any source code file type "vi filename.java".
+* Enter into app-java directory: "cd app-java"
+* Here, when you type "ls" you will be able to see datasets directory, java build file and src directory where my source code exists.
+* You can acces my code if you want to by following the specific path: "cd src/main/java/csc435/app"
+* After entering into the above path, type "ls" and you will find my source code files. If you wish to enter any source code file type "vi filename.java".
 
 ### Requirements
 
